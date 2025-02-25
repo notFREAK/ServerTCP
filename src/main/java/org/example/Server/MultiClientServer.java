@@ -4,12 +4,14 @@ import com.google.gson.Gson;
 import org.example.figure.Circle;
 import org.example.figure.Line;
 import org.example.figure.Rectangle;
+import org.example.figure.Shape;
 
 import javax.swing.*;
 import java.awt.*;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -175,23 +177,19 @@ public class MultiClientServer extends JFrame implements ServerLogic.ServerListe
                         if(idx > 0){
                             String className = content.substring(0, idx);
                             String json = content.substring(idx);
-                            Object obj = null;
-                            switch(className){
-                                case "Circle":
-                                    obj = new Gson().fromJson(json, Circle.class);
-                                    break;
-                                case "Rectangle":
-                                    obj = new Gson().fromJson(json, Rectangle.class);
-                                    break;
-                                case "Line":
-                                    obj = new Gson().fromJson(json, Line.class);
-                                    break;
-                                default:
-                                    out.println("ERROR: Unknown class");
-                                    continue;
+                            Map<String, Class<? extends Shape>> shapeMap = new HashMap<>();
+                            shapeMap.put("Circle", Circle.class);
+                            shapeMap.put("Rectangle", Rectangle.class);
+                            shapeMap.put("Line", Line.class);
+
+                            Class<? extends Shape> clazz = shapeMap.get(className);
+                            if (clazz == null) {
+                                out.println("ERROR: Unknown class");
+                                continue;
                             }
-                            if(obj != null){
-                                int id = logic.addObject(obj);
+                            Shape shape = new Gson().fromJson(json, clazz);
+                            if (shape != null) {
+                                int id = logic.addObject(shape);
                                 out.println("OK: Received " + className + " with id " + id);
                             }
                         } else {
