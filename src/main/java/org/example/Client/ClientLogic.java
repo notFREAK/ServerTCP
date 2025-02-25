@@ -1,16 +1,15 @@
 package org.example.Client;
 
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import org.example.figure.Circle;
 import org.example.figure.Line;
 import org.example.figure.Rectangle;
+import org.example.figure.Shape;
 
 import java.io.*;
-import java.lang.reflect.Type;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -23,64 +22,53 @@ public class ClientLogic {
     private final Gson gson = new Gson();
 
     public ClientLogic(String host, int port) {
-        this.host=host;this.port=port;
+        this.host = host;
+        this.port = port;
     }
 
     public boolean connect(){
-        try{
-            socket=new Socket(host,port);
-            out=new PrintWriter(socket.getOutputStream(),true);
-            in=new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        try {
+            socket = new Socket(host, port);
+            out = new PrintWriter(socket.getOutputStream(), true);
+            in  = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             return true;
-        }catch(IOException ex){
+        } catch(IOException ex){
             ex.printStackTrace();
             return false;
         }
     }
 
-    public String sendCircle(Circle c){
-        return sendObject("Circle", c);
+    public String sendShape(Shape shape) {
+        if (out == null) return "Not connected";
+        String json = gson.toJson(shape);
+        out.println("ADD " + shape.getType() + json);
+        return readResponse();
     }
 
-    public String sendRectangle(Rectangle r){
-        return sendObject("Rectangle",r);
-    }
-
-    public String sendLine(Line l){
-        return sendObject("Line", l);
-    }
-
-    private String sendObject(String type, Object obj){
-        if(out==null) return "Not connected";
-        String json=gson.toJson(obj);
-        out.println(type+json);
+    public String sendCommand(String command) {
+        if (out == null) return "Not connected";
+        out.println(command);
         return readResponse();
     }
 
     private String readResponse(){
-        if(in==null) return "No input stream";
-        try{
-            String resp=in.readLine();
-            if(resp==null)return "No response";
-            return resp;
-        }catch(IOException e){
+        if(in == null) return "No input stream";
+        try {
+            String resp = in.readLine();
+            return resp != null ? resp : "No response";
+        } catch(IOException e){
             e.printStackTrace();
             return "Error reading";
         }
     }
 
     public List<Object> getAllObjects() {
-        if (out == null) {
-            return Collections.emptyList();
-        }
+        if (out == null) return Collections.emptyList();
         out.println("GET_ALL");
         try {
             String line = in.readLine();
-            if (line == null) {
-                return Collections.emptyList();
-            }
-
-            Type listType = new TypeToken<List<Map<String, Object>>>() {}.getType();
+            if (line == null) return Collections.emptyList();
+            java.lang.reflect.Type listType = new com.google.gson.reflect.TypeToken<List<Map<String, Object>>>() {}.getType();
             List<Map<String, Object>> list = gson.fromJson(line, listType);
             return mapListToObjects(list);
         } catch (IOException e) {
@@ -93,9 +81,7 @@ public class ClientLogic {
         List<Object> result = new ArrayList<>();
         for (Map<String, Object> m : list) {
             Object obj = mapToObject(m);
-            if (obj != null) {
-                result.add(obj);
-            }
+            if (obj != null) result.add(obj);
         }
         return result;
     }
@@ -103,12 +89,9 @@ public class ClientLogic {
     private Object mapToObject(Map<String, Object> m) {
         String type = (String) m.get("type");
         if (type == null) return null;
-
         Object data = m.get("data");
         if (!(data instanceof Map)) return null;
-
         String jsonData = gson.toJson(data);
-
         switch (type) {
             case "Circle":
                 return gson.fromJson(jsonData, Circle.class);

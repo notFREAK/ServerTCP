@@ -1,16 +1,14 @@
 package org.example.Client;
 
-import org.example.figure.Circle;
-import org.example.figure.Line;
-import org.example.figure.Rectangle;
+import org.example.factory.ShapeFactory;
+import org.example.figure.Shape;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.text.DecimalFormat;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 
 public class ClientGUI extends JFrame {
@@ -33,9 +31,14 @@ public class ClientGUI extends JFrame {
     private JTextArea responseArea;
     private DrawingPanel drawingPanel;
 
+    private JTextField shapeIdField;
+    private JButton deleteButton, getShapeByIdButton;
+
+    private Shape currentShape;
+
     public ClientGUI(){
         super("Client TCP");
-        setSize(800,400);
+        setSize(800,500);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
@@ -46,85 +49,102 @@ public class ClientGUI extends JFrame {
             System.exit(0);
         }
 
-        drawingPanel=new DrawingPanel();
+        drawingPanel = new DrawingPanel();
         drawingPanel.setPreferredSize(new Dimension(400,400));
-        add(drawingPanel,BorderLayout.WEST);
+        add(drawingPanel, BorderLayout.WEST);
 
-        JPanel rightPanel=new JPanel(new BorderLayout());
-        add(rightPanel,BorderLayout.CENTER);
+        JPanel rightPanel = new JPanel(new BorderLayout());
+        add(rightPanel, BorderLayout.CENTER);
 
-        JPanel topPanel=new JPanel();
-        objectTypeBox=new JComboBox<>(new String[]{"Circle","Rectangle","Line"});
+        JPanel topPanel = new JPanel();
+        objectTypeBox = new JComboBox<>(new String[]{"Circle","Rectangle","Line"});
         topPanel.add(new JLabel("Класс объекта:"));
         topPanel.add(objectTypeBox);
-        rightPanel.add(topPanel,BorderLayout.NORTH);
+        rightPanel.add(topPanel, BorderLayout.NORTH);
 
-        cardLayout=new CardLayout();
-        paramsPanel=new JPanel(cardLayout);
+        cardLayout = new CardLayout();
+        paramsPanel = new JPanel(cardLayout);
 
-        circlePanel=new JPanel(new GridLayout(3,2,5,5));
-        circleXField=new JTextField("100");
-        circleYField=new JTextField("200");
-        circleRadiusField=new JTextField("50");
-        circlePanel.add(new JLabel("X:"));circlePanel.add(circleXField);
-        circlePanel.add(new JLabel("Y:"));circlePanel.add(circleYField);
-        circlePanel.add(new JLabel("Радиус:"));circlePanel.add(circleRadiusField);
+        circlePanel = new JPanel(new GridLayout(3,2,5,5));
+        circleXField = new JTextField("100");
+        circleYField = new JTextField("200");
+        circleRadiusField = new JTextField("50");
+        circlePanel.add(new JLabel("X:")); circlePanel.add(circleXField);
+        circlePanel.add(new JLabel("Y:")); circlePanel.add(circleYField);
+        circlePanel.add(new JLabel("Радиус:")); circlePanel.add(circleRadiusField);
 
-        rectanglePanel=new JPanel(new GridLayout(4,2,5,5));
-        rectXField=new JTextField("10");
-        rectYField=new JTextField("10");
-        rectWidthField=new JTextField("100");
-        rectHeightField=new JTextField("50");
-        rectanglePanel.add(new JLabel("X:"));rectanglePanel.add(rectXField);
-        rectanglePanel.add(new JLabel("Y:"));rectanglePanel.add(rectYField);
-        rectanglePanel.add(new JLabel("Ширина:"));rectanglePanel.add(rectWidthField);
-        rectanglePanel.add(new JLabel("Высота:"));rectanglePanel.add(rectHeightField);
+        rectanglePanel = new JPanel(new GridLayout(4,2,5,5));
+        rectXField = new JTextField("10");
+        rectYField = new JTextField("10");
+        rectWidthField = new JTextField("100");
+        rectHeightField = new JTextField("50");
+        rectanglePanel.add(new JLabel("X:")); rectanglePanel.add(rectXField);
+        rectanglePanel.add(new JLabel("Y:")); rectanglePanel.add(rectYField);
+        rectanglePanel.add(new JLabel("Ширина:")); rectanglePanel.add(rectWidthField);
+        rectanglePanel.add(new JLabel("Высота:")); rectanglePanel.add(rectHeightField);
 
-        linePanel=new JPanel(new GridLayout(4,2,5,5));
-        lineX1Field=new JTextField("0");
-        lineY1Field=new JTextField("0");
-        lineX2Field=new JTextField("200");
-        lineY2Field=new JTextField("200");
-        linePanel.add(new JLabel("X1:"));linePanel.add(lineX1Field);
-        linePanel.add(new JLabel("Y1:"));linePanel.add(lineY1Field);
-        linePanel.add(new JLabel("X2:"));linePanel.add(lineX2Field);
-        linePanel.add(new JLabel("Y2:"));linePanel.add(lineY2Field);
+        linePanel = new JPanel(new GridLayout(4,2,5,5));
+        lineX1Field = new JTextField("0");
+        lineY1Field = new JTextField("0");
+        lineX2Field = new JTextField("200");
+        lineY2Field = new JTextField("200");
+        linePanel.add(new JLabel("X1:")); linePanel.add(lineX1Field);
+        linePanel.add(new JLabel("Y1:")); linePanel.add(lineY1Field);
+        linePanel.add(new JLabel("X2:")); linePanel.add(lineX2Field);
+        linePanel.add(new JLabel("Y2:")); linePanel.add(lineY2Field);
 
-        paramsPanel.add(circlePanel,"Circle");
-        paramsPanel.add(rectanglePanel,"Rectangle");
-        paramsPanel.add(linePanel,"Line");
+        paramsPanel.add(circlePanel, "Circle");
+        paramsPanel.add(rectanglePanel, "Rectangle");
+        paramsPanel.add(linePanel, "Line");
 
-        JPanel centerParamsPanel=new JPanel();
+        JPanel centerParamsPanel = new JPanel();
         centerParamsPanel.add(paramsPanel);
-        rightPanel.add(centerParamsPanel,BorderLayout.CENTER);
+        rightPanel.add(centerParamsPanel, BorderLayout.CENTER);
 
-        JPanel bottomPanel=new JPanel(new BorderLayout());
-        sendButton=new JButton("Отправить");
-        responseArea=new JTextArea(5,20);
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        sendButton = new JButton("Отправить");
+        responseArea = new JTextArea(5,20);
         responseArea.setEditable(false);
-        bottomPanel.add(new JScrollPane(responseArea),BorderLayout.NORTH);
-        bottomPanel.add(sendButton,BorderLayout.CENTER);
+        bottomPanel.add(new JScrollPane(responseArea), BorderLayout.NORTH);
 
-        getObjectsButton=new JButton("Получить фигуры с сервера");
-        bottomPanel.add(getObjectsButton,BorderLayout.SOUTH);
+        JPanel buttonPanel = new JPanel(new BorderLayout());
+        buttonPanel.add(sendButton, BorderLayout.NORTH);
 
-        rightPanel.add(bottomPanel,BorderLayout.SOUTH);
+        getObjectsButton = new JButton("Получить все фигуры с сервера");
+        buttonPanel.add(getObjectsButton, BorderLayout.SOUTH);
 
-        objectTypeBox.addActionListener(e->{
-            String sel=(String)objectTypeBox.getSelectedItem();
-            cardLayout.show(paramsPanel,sel);
+        JPanel commandPanel = new JPanel();
+        shapeIdField = new JTextField(5);
+        deleteButton = new JButton("Удалить по id");
+        getShapeByIdButton = new JButton("Получить по id");
+        commandPanel.add(new JLabel("ID фигуры:"));
+        commandPanel.add(shapeIdField);
+        commandPanel.add(deleteButton);
+        commandPanel.add(getShapeByIdButton);
+        buttonPanel.add(commandPanel, BorderLayout.CENTER);
+        bottomPanel.add(buttonPanel, BorderLayout.CENTER);
+        rightPanel.add(bottomPanel, BorderLayout.SOUTH);
+
+        objectTypeBox.addActionListener(e -> {
+            String sel = (String) objectTypeBox.getSelectedItem();
+            cardLayout.show(paramsPanel, sel);
+            updateCurrentShape();
             drawingPanel.repaint();
         });
 
-        DocumentListener docListener=new DocumentListener(){
+        DocumentListener docListener = new DocumentListener(){
             @Override
-            public void insertUpdate(DocumentEvent e){onTextChanged();}
+            public void insertUpdate(DocumentEvent e){ updateAndRepaint(); }
             @Override
-            public void removeUpdate(DocumentEvent e){onTextChanged();}
+            public void removeUpdate(DocumentEvent e){ updateAndRepaint(); }
             @Override
-            public void changedUpdate(DocumentEvent e){onTextChanged();}
-            private void onTextChanged(){drawingPanel.repaint();}
+            public void changedUpdate(DocumentEvent e){ updateAndRepaint(); }
+            private void updateAndRepaint(){
+                updateCurrentShape();
+                drawingPanel.repaint();
+            }
         };
+
         circleXField.getDocument().addDocumentListener(docListener);
         circleYField.getDocument().addDocumentListener(docListener);
         circleRadiusField.getDocument().addDocumentListener(docListener);
@@ -137,159 +157,117 @@ public class ClientGUI extends JFrame {
         lineX2Field.getDocument().addDocumentListener(docListener);
         lineY2Field.getDocument().addDocumentListener(docListener);
 
-        sendButton.addActionListener(new ActionListener(){
-            @Override
-            public void actionPerformed(ActionEvent e){
-                sendObjectToServer();
-            }
-        });
+        sendButton.addActionListener(e -> sendObjectToServer());
 
-        getObjectsButton.addActionListener(e->{
+        getObjectsButton.addActionListener(e -> {
             List<Object> objs = logic.getAllObjects();
             showObjectsDialog(objs);
+        });
+
+        deleteButton.addActionListener(e -> {
+            int id = parseIntOrZero(shapeIdField.getText());
+            String response = logic.sendCommand("DELETE " + id);
+            responseArea.append("Server: " + response + "\n");
+        });
+
+        getShapeByIdButton.addActionListener(e -> {
+            int id = parseIntOrZero(shapeIdField.getText());
+            String response = logic.sendCommand("GET " + id);
+            responseArea.append("Server: " + response + "\n");
         });
     }
 
     private void sendObjectToServer(){
-        if(logic==null){
-            responseArea.append("Logic not initialized\n");
-            return;
+        String selected = (String) objectTypeBox.getSelectedItem();
+        Map<String, Integer> params = gatherParams(selected);
+        try {
+            Shape shape = ShapeFactory.createShape(selected, params);
+            currentShape = shape;
+            drawingPanel.repaint();
+            String response = logic.sendShape(shape);
+            responseArea.append("Server: " + response + "\n");
+        } catch (IllegalArgumentException e) {
+            responseArea.append("Ошибка: " + e.getMessage() + "\n");
         }
-        String selected=(String)objectTypeBox.getSelectedItem();
-        String response="";
-        switch(selected){
-            case "Circle":
-                int cx=parseIntOrZero(circleXField.getText());
-                int cy=parseIntOrZero(circleYField.getText());
-                int cr=parseIntOrZero(circleRadiusField.getText());
-                Circle c=new Circle(cx,cy,cr);
-                response=logic.sendCircle(c);
-                break;
-            case "Rectangle":
-                int rx=parseIntOrZero(rectXField.getText());
-                int ry=parseIntOrZero(rectYField.getText());
-                int rw=parseIntOrZero(rectWidthField.getText());
-                int rh=parseIntOrZero(rectHeightField.getText());
-                Rectangle r=new Rectangle(rx,ry,rw,rh);
-                response=logic.sendRectangle(r);
-                break;
-            case "Line":
-                int lx1=parseIntOrZero(lineX1Field.getText());
-                int ly1=parseIntOrZero(lineY1Field.getText());
-                int lx2=parseIntOrZero(lineX2Field.getText());
-                int ly2=parseIntOrZero(lineY2Field.getText());
-                Line l=new Line(lx1,ly1,lx2,ly2);
-                response=logic.sendLine(l);
-                break;
-        }
-        responseArea.append("Server: "+response+"\n");
     }
 
-    private void showObjectsDialog(List<Object> objs){
-        JDialog dialog=new JDialog(this,"Список фигур на сервере",true);
+    private Map<String, Integer> gatherParams(String type) {
+        Map<String, Integer> params = new HashMap<>();
+        switch (type) {
+            case "Circle":
+                params.put("x", parseIntOrZero(circleXField.getText()));
+                params.put("y", parseIntOrZero(circleYField.getText()));
+                params.put("radius", parseIntOrZero(circleRadiusField.getText()));
+                break;
+            case "Rectangle":
+                params.put("x", parseIntOrZero(rectXField.getText()));
+                params.put("y", parseIntOrZero(rectYField.getText()));
+                params.put("width", parseIntOrZero(rectWidthField.getText()));
+                params.put("height", parseIntOrZero(rectHeightField.getText()));
+                break;
+            case "Line":
+                params.put("x1", parseIntOrZero(lineX1Field.getText()));
+                params.put("y1", parseIntOrZero(lineY1Field.getText()));
+                params.put("x2", parseIntOrZero(lineX2Field.getText()));
+                params.put("y2", parseIntOrZero(lineY2Field.getText()));
+                break;
+        }
+        return params;
+    }
+
+    private int parseIntOrZero(String s) {
+        try {
+            return Integer.parseInt(s);
+        } catch(NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    private void showObjectsDialog(List<Object> objs) {
+        JDialog dialog = new JDialog(this, "Список фигур на сервере", true);
         dialog.setSize(300,200);
-        DefaultListModel<String> listModel=new DefaultListModel<>();
-        for(Object o:objs){
+        DefaultListModel<String> listModel = new DefaultListModel<>();
+        for (Object o : objs) {
             listModel.addElement(o.toString());
         }
-        JList<String> list=new JList<>(listModel);
+        JList<String> list = new JList<>(listModel);
         dialog.add(new JScrollPane(list));
         dialog.setLocationRelativeTo(this);
         dialog.setVisible(true);
     }
 
-    private int parseIntOrZero(String s){
-        try{
-            return Integer.parseInt(s);
-        }catch(NumberFormatException e){return 0;}
+    private void updateCurrentShape() {
+        String selected = (String) objectTypeBox.getSelectedItem();
+        Map<String, Integer> params = gatherParams(selected);
+        try {
+            currentShape = ShapeFactory.createShape(selected, params);
+        } catch (IllegalArgumentException e) {
+            currentShape = null;
+        }
     }
 
     class DrawingPanel extends JPanel {
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
-
-            String selected = (String) objectTypeBox.getSelectedItem();
-            int leftMargin = 10;
-            int topMargin = 10;
-            int width = getWidth();
-            int height = getHeight();
-            int drawWidth = width - 2*leftMargin;
-            int drawHeight = height - 2*topMargin;
-
             Graphics2D g2 = (Graphics2D) g;
-
-            double scaleX = 0, scaleY = 0;
-            switch (selected) {
-                case "Circle":
-                    int cx = parseIntOrZero(circleXField.getText());
-                    int cy = parseIntOrZero(circleYField.getText());
-                    int cr = parseIntOrZero(circleRadiusField.getText());
-                    scaleX = (double)drawWidth / (cx + cr * 2);
-                    scaleY = (double)drawHeight / (cy + cr * 2);
-                    break;
-                case "Rectangle":
-                    int rx = parseIntOrZero(rectXField.getText());
-                    int ry = parseIntOrZero(rectYField.getText());
-                    int rw = parseIntOrZero(rectWidthField.getText());
-                    int rh = parseIntOrZero(rectHeightField.getText());
-                    scaleX = (double)drawWidth / (rx + rw);
-                    scaleY = (double)drawHeight / (ry + rh);
-                    break;
-                case "Line":
-                    int lx1 = parseIntOrZero(lineX1Field.getText());
-                    int ly1 = parseIntOrZero(lineY1Field.getText());
-                    int lx2 = parseIntOrZero(lineX2Field.getText());
-                    int ly2 = parseIntOrZero(lineY2Field.getText());
-                    int ly = Math.min(lx1, lx2);
-                    int lx = Math.min(ly1, ly2);
-                    int lw = Math.abs(lx2 - lx1);
-                    int lh = Math.abs(ly2 - ly1);
-                    scaleX = (double)drawWidth / (lx + lw);
-                    scaleY = (double)drawHeight / (ly + lh);
-                    break;
-            }
-
-            double scale = Math.min(Math.min(scaleX, scaleY), 1);
-
+            int leftMargin = 10, topMargin = 10;
+            int drawWidth = getWidth() - 2 * leftMargin;
+            int drawHeight = getHeight() - 2 * topMargin;
             g2.translate(leftMargin, topMargin);
-
             g2.setColor(Color.WHITE);
-            g2.fillRect(0,0, drawWidth, drawHeight);
+            g2.fillRect(0, 0, drawWidth, drawHeight);
             g2.setColor(Color.BLACK);
-            g2.drawRect(0,0, drawWidth, drawHeight);
-            g2.drawString(new DecimalFormat("x#0.00:1").format(scale), 340,10);
-            float lineWidth = (float)(scale);
-            g2.setStroke(new BasicStroke(lineWidth));
+            g2.drawRect(0, 0, drawWidth, drawHeight);
 
-            g2.scale(scale, scale);
-            g2.setColor(Color.RED);
-            switch (selected) {
-                case "Circle":
-                    int cx = parseIntOrZero(circleXField.getText());
-                    int cy = parseIntOrZero(circleYField.getText());
-                    int cr = parseIntOrZero(circleRadiusField.getText());
-                    g2.drawOval(cx, cy, cr, cr);
-                    break;
-                case "Rectangle":
-                    int rx = parseIntOrZero(rectXField.getText());
-                    int ry = parseIntOrZero(rectYField.getText());
-                    int rw = parseIntOrZero(rectWidthField.getText());
-                    int rh = parseIntOrZero(rectHeightField.getText());
-                    g2.drawRect(rx, ry, rw, rh);
-                    break;
-                case "Line":
-                    int lx1 = parseIntOrZero(lineX1Field.getText());
-                    int ly1 = parseIntOrZero(lineY1Field.getText());
-                    int lx2 = parseIntOrZero(lineX2Field.getText());
-                    int ly2 = parseIntOrZero(lineY2Field.getText());
-                    g2.drawLine(lx1, ly1, lx2, ly2);
-                    break;
+            if (currentShape != null) {
+                g2.setColor(Color.RED);
+                currentShape.draw(g2);
             }
         }
     }
 
     public static void main(String[] args){
-        SwingUtilities.invokeLater(()->new ClientGUI().setVisible(true));
+        SwingUtilities.invokeLater(() -> new ClientGUI().setVisible(true));
     }
 }
