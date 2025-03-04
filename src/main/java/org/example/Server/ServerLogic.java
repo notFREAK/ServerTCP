@@ -4,6 +4,8 @@ import com.google.gson.Gson;
 import org.example.figure.Circle;
 import org.example.figure.Line;
 import org.example.figure.Rectangle;
+import org.example.figure.Shape;
+import org.example.factory.ShapeFactory;
 
 import java.io.*;
 import java.util.*;
@@ -129,15 +131,8 @@ public class ServerLogic {
         Object data = m.get("data");
         if (!(data instanceof Map)) return null;
         String jsonData = gson.toJson(data);
-        switch (type) {
-            case "Circle":
-                return gson.fromJson(jsonData, Circle.class);
-            case "Rectangle":
-                return gson.fromJson(jsonData, Rectangle.class);
-            case "Line":
-                return gson.fromJson(jsonData, Line.class);
-            default:
-                return null;
-        }
+        Class<? extends Shape> clazz;
+        clazz = ShapeFactory.getShapeClass(type);
+        return clazz != null ? gson.fromJson(jsonData, clazz) : null;
     }
 }
