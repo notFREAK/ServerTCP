@@ -72,16 +72,7 @@ public class ServerLogic {
     private Map<String, Object> objectToMapWithType(int id, Object o) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("id", id);
-        String type;
-        if (o instanceof Circle) {
-            type = "Circle";
-        } else if (o instanceof Rectangle) {
-            type = "Rectangle";
-        } else if (o instanceof Line) {
-            type = "Line";
-        } else {
-            type = "Unknown";
-        }
+        String type = ((Shape)o).getType();
         map.put("type", type);
         Map<String, Object> dataMap = gson.fromJson(gson.toJson(o), Map.class);
         map.put("data", dataMap);

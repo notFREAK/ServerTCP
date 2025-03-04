@@ -149,16 +149,7 @@ public class MultiClientServer extends JFrame implements ServerLogic.ServerListe
                             if(obj != null) {
                                 Map<String, Object> map = new LinkedHashMap<>();
                                 map.put("id", id);
-                                String type;
-                                if(obj instanceof Circle) {
-                                    type = "Circle";
-                                } else if(obj instanceof Rectangle) {
-                                    type = "Rectangle";
-                                } else if(obj instanceof Line) {
-                                    type = "Line";
-                                } else {
-                                    type = "Unknown";
-                                }
+                                String type = ((Shape)obj).getType();
                                 map.put("type", type);
                                 Map<String, Object> dataMap = new Gson().fromJson(new Gson().toJson(obj), Map.class);
                                 map.put("data", dataMap);
